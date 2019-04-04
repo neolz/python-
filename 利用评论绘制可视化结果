@@ -1,0 +1,120 @@
+import pandas as pd
+from collections import Counter
+from pyecharts import Map,Geo,Bar  #Geo地理坐标系，Map地图，Bar柱状图
+import jieba
+import jieba.analyse
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud,STOPWORDS,ImageColorGenerator
+import snownlp
+from PIL import Image
+import numpy as np
+
+def read_table(filename,titles):
+    comments = pd.read_table(filename, names=titles,sep=',')
+    return comments
+
+#地图数据
+def draw_map(comments):
+    try:
+        #pandas.fillna 填充缺失数据
+        attr = comments['cityName'].fillna("zero_token")
+        #collcetions.Counter，返回一个TopN列表。如果n没有被指定，则返回所有元素。当多个元素计数值相同时，排列是无确定顺序的。
+        data = Counter(attr).most_common()
+        #index() 方法检测字符串中是否包含子字符串 str
+        #存疑
+        data.remove(data[data.index([(i,x) for i ,x in (data) if i == 'zero_token'][0])])
+        geo = Geo("死侍2评论位置", "数据来源：猫眼电影 ",
+                  title_color='#fff',
+                  title_pos="center",
+                  width=1000,
+                  height=600,
+                  background_color='#404a59')
+        #attr标签名称，value值
+        attr,value = geo.cast(data)
+        #第一个""显示悬浮文档名
+        geo.add("",attr,value,
+                visual_range=[0,3000],
+                maptype='china',
+                visual_range_color="#fff",
+                symbol_size=5,
+                is_visualmap=True)
+        geo.render("观众位置分布-地理坐标图_all.html")
+    except Exception as e :
+        print(e)
+
+def draw_bar(comments):
+    data_top20 = Counter(comments['cityName']).most_common(20)
+    bar = Bar('《死侍2》观众来源排行TOP20', '数据来源：猫眼-Ryan采集', title_pos='center', width=1200, height=600)
+    attr, value = bar.cast(data_top20)
+    bar.add('', attr, value, is_visualmap=True, visual_range=[0, 3500], visual_text_color='#fff', is_more_utils=True, is_label_show=True)
+    bar.render('观众来源排行-柱状图.html')
+    print("success")
+
+
+def draw_wordCloud(comments):
+    data = comments['content']
+    comment_data = []
+
+    for item in data:
+        #判断缺失值
+        if pd.isnull(item) == False:
+            comment_data.append(item)
+    #print(comment_data)
+    #jieba  中文分词库，cut_all=True 为全模式，False为精确模式
+    comment_after_split = jieba.cut(str(comment_data),cut_all=False)
+    words = ' '.join(comment_after_split)
+    #print(words)
+
+    with open('words.txt', "a+",encoding='utf-8') as a:
+        a.write(words)
+        a.close()
+
+    #为什么分割用一个符号就会出现英文？
+    words_list = words.split('=')
+    #print("word_list:",words_list)
+
+    words_blank = []
+    for word in words_list:
+        if word not in words_blank:
+            words_blank.append(word)
+    #print(words_blank)
+
+    comment_after_split_0 = jieba.cut(str(words_blank), cut_all=False)
+    new_words = ' '.join(comment_after_split_0)
+    print(new_words)
+    with open('new_words.txt', "a+",encoding='utf-8') as a:
+        a.write(new_words)
+        a.close()
+
+    stopwords = STOPWORDS.copy()
+    stopwords.add('电影')
+    stopwords.add('一部')
+    stopwords.add('一个')
+    stopwords.add('没有')
+    stopwords.add('什么')
+    stopwords.add('有点')
+    stopwords.add('感觉')
+    stopwords.add('死侍')
+    stopwords.add('就是')
+    stopwords.add('觉得')
+    stopwords.add('可以')
+    stopwords.add('还是')
+    stopwords.add('真的')
+    wc = WordCloud(width=1080, height=960, background_color='white', font_path='simhei.ttf', stopwords=stopwords,
+                   max_font_size=400, random_state=50)
+    wc.generate_from_text(new_words)
+
+    plt.figure(figsize=(10, 8))
+    plt.imshow(wc)
+    plt.axis('off')
+    plt.savefig('WordCloud.png')
+    plt.show()
+
+if __name__ == '__main__':
+    filename = "deadpool2_starttime1111.txt"
+    titles = ['nickName', 'cityName', 'content', 'score', 'startTime']
+    comments = read_table(filename, titles)
+    draw_map(comments)
+    draw_bar(comments)
+    draw_wordCloud(comments)
+    print('success')
