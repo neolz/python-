@@ -1,0 +1,40 @@
+import requests
+import json
+import datetime
+import time
+
+headers = {'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1'}
+
+start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+end_time = '2018-12-2 00:00:00'
+while start_time > end_time:
+
+    url = 'http://m.maoyan.com/mmdb/comments/movie/42964.json?_v_=yes&offset=0&startTime=' + start_time.replace(' ', '%20')
+    r = requests.get(url, headers=headers)
+    r.encoding = 'utf-8'
+
+    # 解析json数据
+    json_data = json.loads(r.text)['cmts']
+    comment_list = []
+
+    for item in json_data:
+        comment = {
+            'nickName': item['nickName'],
+            'cityName': item['cityName'] if 'cityName' in item else '',
+            'content': item['content'].strip().replace('\n', ''),
+            'score': item['score'],
+            'startTime': item['startTime']
+        }
+        comment_list.append(comment)
+
+    #html = None
+    start_time = comment_list[14]['startTime']
+    #print(start_time)
+    start_time = datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')+datetime.timedelta(seconds=-1)
+    print(start_time)
+    start_time = datetime.datetime.strftime(start_time, '%Y-%m-%d %H:%M:%S')
+    #存储数据
+    for item in comment_list:
+        with open('text_ajax2.txt', 'a',encoding='utf-8')as f:
+            # print(item)
+            f.write(item['nickName'] + ',' + item['cityName'] + ',' + item['content'] + ',' + str(item['score']) +  ',' + item['startTime'] + '\n')
