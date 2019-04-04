@@ -1,0 +1,53 @@
+import requests
+import json
+import datetime
+import time
+import pandas as pd
+
+#获取网页html内容
+def get_data(url):
+    headers = {'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1'}
+    try:
+        r = requests.get(url,headers = headers)
+        return r.text
+    except requests.HTTPError as e :
+        print(e)
+    except:
+        print("unknown error")
+
+
+#获取感兴趣的信息数组
+def prase_data(html):
+    json_data = json.loads(html)['data']['comments']
+    comment_list = []
+    for item in json_data:
+        comment = []
+        comment.append(item['nick'])
+        comment.append(item['content'].strip().replace('\n',''))
+        comment_list.append(comment)
+    return comment_list
+#存储
+def save_data(comments):
+    filename = '毒液全评论2.txt'
+    dataframe = pd.DataFrame(comments)
+    dataframe.to_csv(filename, mode='a', index=False, sep=',', header=False)
+
+def main():
+    url  = 'http://m.maoyan.com/review/v2/comments.json?movieId=1208282&userId=-1&offset=45&limit=15&ts=1548396952162&type=3'
+    html = get_data(url)
+    totals  = json.loads(html)['paging']['total']
+    print(totals)
+    page = 0
+    while page < totals:
+        url = 'http://m.maoyan.com/review/v2/comments.json?movieId=1208282&userId=-1&offset=' + str(page) + '&limit=15&ts=1548396952162&type=3'
+        html = get_data(url)
+        comments = prase_data(html)
+        save_data(comments)
+        print(page)
+        page+=15
+
+if __name__ == '__main__':
+    main()
+    print('完成')
+
+
